@@ -65,7 +65,7 @@ describe('command palette workflows', () => {
 
     const child = useNotesStore.getState().notes.find(note => note.parentId === parent.id)
     expect(child?.title).toBe('Child')
-    expect(useNotesStore.getState().getNote(parent.id)?.content).toBe('alpha\n[[subnote:Child]]\n beta')
+    expect(useNotesStore.getState().getNote(parent.id)?.content).toBe(`alpha\n[[subnote:${child?.id}:Child]]\n beta`)
     expect(useUIStore.getState().activeNoteId).toBe(child?.id)
     expect(writeNote).toHaveBeenCalledOnce()
   })

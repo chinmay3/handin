@@ -53,13 +53,29 @@ export function parseNoteFile(fileName: string, raw: string, isScratch: boolean)
   const stats = statSync(fileName)
 
   if (metadataMatch) {
-    const metadata = JSON.parse(metadataMatch[1]) as Partial<Note> & { contentHash?: string }
     const body = raw.slice(metadataMatch[0].length)
     const headingEnd = body.indexOf('\n')
     const title = body.startsWith('# ')
       ? body.slice(2, headingEnd === -1 ? undefined : headingEnd).trim()
       : basename(fileName, extname(fileName))
     const content = headingEnd === -1 ? '' : body.slice(headingEnd + 1).replace(/^\n/, '')
+    let metadata: Partial<Note> & { contentHash?: string }
+    try {
+      metadata = JSON.parse(metadataMatch[1]) as Partial<Note> & { contentHash?: string }
+    } catch {
+      return {
+        id: basename(fileName, extname(fileName)),
+        title: normalizeTitle(title),
+        content,
+        parentId: null,
+        isScratch,
+        scratchExpiresAt: isScratch ? stats.mtimeMs + 86400000 : null,
+        taskListId: null,
+        createdAt: stats.birthtimeMs || stats.mtimeMs,
+        updatedAt: stats.mtimeMs,
+        editSessions: []
+      }
+    }
     return {
       id: String(metadata.id || basename(fileName, extname(fileName))),
       title: normalizeTitle(title),

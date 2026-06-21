@@ -23,12 +23,33 @@ describe('note editor workflows', () => {
     expect(document.querySelector('[data-document-line="1"]')).not.toHaveClass('font-bold')
   })
 
-  it('converts typed ASCII arrows to the arrow glyph and preserves the cursor', () => {
+  it('converts typed ASCII arrows to the arrow glyph and preserves the cursor', async () => {
+    const user = userEvent.setup()
     const note = useNotesStore.getState().addNote({ title: 'Title' })
     render(<Editor noteId={note.id} />)
     const textarea = editorFor(note.id)
-    fireEvent.change(textarea, { target: { value: 'first -> second', selectionStart: 15 } })
-    expect(textarea.value).toBe('first → second')
+    await user.click(textarea)
+    await user.type(textarea, 'first -> second')
+    expect(textarea).toHaveValue('first → second')
+    expect(textarea.selectionStart).toBe('first → second'.length)
+    expect(document.querySelector('[data-inline-arrow="true"]')).toHaveTextContent('→')
+    expect(document.querySelector('[data-inline-arrow="true"] svg')).not.toBeInTheDocument()
+    await user.type(textarea, ' continued')
+    expect(textarea).toHaveValue('first → second continued')
+    expect(textarea.selectionStart).toBe('first → second continued'.length)
+  })
+
+  it('keeps the caret aligned when an arrow is inserted inside existing text', async () => {
+    const user = userEvent.setup()
+    const note = useNotesStore.getState().addNote({ title: 'Title', content: 'alpha omega' })
+    render(<Editor noteId={note.id} />)
+    const textarea = editorFor(note.id)
+    textarea.focus()
+    textarea.setSelectionRange(6, 6)
+    await user.type(textarea, '->beta ', { skipClick: true })
+    expect(textarea).toHaveValue('alpha →beta omega')
+    expect(textarea.selectionStart).toBe('alpha →beta '.length)
+    expect(document.querySelectorAll('[data-inline-arrow="true"]')).toHaveLength(1)
   })
 
   it('opens an inline sub-note without displaying its id', async () => {
@@ -41,29 +62,30 @@ describe('note editor workflows', () => {
     expect(useUIStore.getState().activeNoteId).toBe(child.id)
   })
 
-  it.fails('keeps duplicate-title sub-note links attached to distinct notes', async () => {
+  it('keeps duplicate-title sub-note links attached to distinct notes', async () => {
     const user = userEvent.setup()
-    const parent = useNotesStore.getState().addNote({
-      title: 'Parent',
-      content: '[[subnote:Duplicate]]\n[[subnote:Duplicate]]'
-    })
-    useNotesStore.getState().addNote({ title: 'Duplicate', parentId: parent.id })
+    const parent = useNotesStore.getState().addNote({ title: 'Parent' })
+    const first = useNotesStore.getState().addNote({ title: 'Duplicate', parentId: parent.id })
     const second = useNotesStore.getState().addNote({ title: 'Duplicate', parentId: parent.id })
+    useNotesStore.getState().updateNote(parent.id, {
+      content: `[[subnote:${first.id}:Duplicate]]\n[[subnote:${second.id}:Duplicate]]`
+    })
     render(<Editor noteId={parent.id} />)
     const links = screen.getAllByRole('button', { name: /Duplicate/ })
     await user.click(links[1])
     expect(useUIStore.getState().activeNoteId).toBe(second.id)
   })
 
-  it.fails('keeps an inline sub-note link working after its child is renamed', () => {
-    const parent = useNotesStore.getState().addNote({ title: 'Parent', content: '[[subnote:Child]]' })
+  it('keeps an inline sub-note link working after its child is renamed', () => {
+    const parent = useNotesStore.getState().addNote({ title: 'Parent' })
     const child = useNotesStore.getState().addNote({ title: 'Child', parentId: parent.id })
+    useNotesStore.getState().updateNote(parent.id, { content: `[[subnote:${child.id}:Child]]` })
     useNotesStore.getState().updateNote(child.id, { title: 'Renamed' })
     render(<Editor noteId={parent.id} />)
     expect(screen.getByRole('button', { name: /Renamed/ })).toBeEnabled()
   })
 
-  it.fails('renders a malformed sub-note token without crashing the document', () => {
+  it('renders a malformed sub-note token without crashing the document', () => {
     const note = useNotesStore.getState().addNote({ title: 'Parent', content: '[[subnote:%E0%A4%A]]' })
     expect(() => render(<Editor noteId={note.id} />)).not.toThrow()
   })
@@ -102,7 +124,7 @@ describe('note editor workflows', () => {
     vi.useRealTimers()
   })
 
-  it.fails('refreshes the open editor when the same note changes externally', () => {
+  it('refreshes the open editor when the same note changes externally', () => {
     const note = useNotesStore.getState().addNote({ title: 'Original', content: 'Old' })
     render(<Editor noteId={note.id} />)
     act(() => useNotesStore.getState().updateNote(note.id, { title: 'External', content: 'Changed' }))

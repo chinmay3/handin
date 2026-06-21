@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useUIStore } from './store/ui'
 import { useNotesStore } from './store/notes'
+import { useTasksStore } from './store/tasks'
+import { useEventsStore } from './store/events'
+import { useGitHubStore } from './store/github'
 import Home from './screens/Home'
 import NoteScreen from './screens/Note'
 import Account from './screens/Account'
@@ -12,6 +15,7 @@ import TaskOverlay from './components/TaskOverlay'
 import HelpNote from './components/HelpNote'
 import ArrowIcon from './components/ArrowIcon'
 import CommandPalette from './components/CommandPalette'
+import GitHubOnboarding from './components/GitHubOnboarding'
 import { spring } from './lib/transitions'
 import { setDocumentCursorPosition } from './lib/documentCursor'
 import { mergeDiskNotes } from './lib/notePersistence'
@@ -24,6 +28,11 @@ export default function App() {
   const toggleRightPanel = useUIStore(s => s.toggleRightPanel)
   const [calendarStripVisible, setCalendarStripVisible] = useState(false)
   const noteFilesInitialized = useRef(false)
+  const workspaceInitialized = useRef(false)
+  const githubStatus = useGitHubStore(s => s.status)
+  const githubChecking = useGitHubStore(s => s.checking)
+  const initializeGitHub = useGitHubStore(s => s.initialize)
+  const applyGitHubStatus = useGitHubStore(s => s.applyStatus)
 
   const hideCalendarStrip = () => {
     setCalendarStripVisible(false)
@@ -34,18 +43,94 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (noteFilesInitialized.current || !window.api) return
+    initializeGitHub()
+  }, [initializeGitHub])
+
+  useEffect(() => {
+    if (githubChecking || !githubStatus.authenticated || noteFilesInitialized.current || !window.api) return
     noteFilesInitialized.current = true
-    window.api.readNotes().then(async diskNotes => {
-      const localNotes = useNotesStore.getState().notes
+    const initializeFiles = async () => {
+      if (githubStatus.authenticated && window.api?.syncGitHub) {
+        const result = await window.api.syncGitHub()
+        applyGitHubStatus(result)
+      }
+
+      const diskNotes = await window.api!.readNotes()
+      const localNotes = githubStatus.authenticated ? [] : useNotesStore.getState().notes
       const merged = mergeDiskNotes(localNotes, diskNotes)
       hydrateNotes(merged.notes)
       await Promise.all(merged.notes.map(note => window.api!.writeNote(note)))
       await Promise.all(merged.legacyFiles.map(file => window.api!.deleteLegacyNote(file.fileName, file.isScratch)))
-    }).catch(() => undefined)
-  }, [hydrateNotes])
+
+      if (window.api?.readWorkspace) {
+        const data = await window.api.readWorkspace()
+        if (data) {
+          useTasksStore.setState({ taskLists: data.taskLists, tasks: data.tasks })
+          useEventsStore.setState({ events: data.events })
+        } else if (window.api.writeWorkspace) {
+          const tasks = useTasksStore.getState()
+          await window.api.writeWorkspace({
+            version: 1,
+            taskLists: tasks.taskLists,
+            tasks: tasks.tasks,
+            events: useEventsStore.getState().events
+          })
+        }
+      }
+    }
+
+    initializeFiles().catch(() => undefined).finally(() => {
+      workspaceInitialized.current = true
+    })
+  }, [applyGitHubStatus, githubChecking, githubStatus.authenticated, hydrateNotes])
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const persistWorkspace = () => {
+      if (!workspaceInitialized.current || !window.api?.writeWorkspace) return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        const tasks = useTasksStore.getState()
+        window.api?.writeWorkspace?.({
+          version: 1,
+          taskLists: tasks.taskLists,
+          tasks: tasks.tasks,
+          events: useEventsStore.getState().events
+        })
+      }, 300)
+    }
+    const unsubscribeTasks = useTasksStore.subscribe(persistWorkspace)
+    const unsubscribeEvents = useEventsStore.subscribe(persistWorkspace)
+    return () => {
+      if (timer) clearTimeout(timer)
+      unsubscribeTasks()
+      unsubscribeEvents()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!window.api?.onGitHubWorkspaceUpdated) return
+    return window.api.onGitHubWorkspaceUpdated(async result => {
+      applyGitHubStatus(result)
+      if (!result.updatedFromRemote || !window.api) return
+      try {
+        const [diskNotes, data] = await Promise.all([
+          window.api.readNotes(),
+          window.api.readWorkspace ? window.api.readWorkspace() : Promise.resolve(null)
+        ])
+        hydrateNotes(mergeDiskNotes([], diskNotes).notes)
+        if (data) {
+          useTasksStore.setState({ taskLists: data.taskLists, tasks: data.tasks })
+          useEventsStore.setState({ events: data.events })
+        }
+      } catch {
+        applyGitHubStatus({ ...result, syncState: 'error', error: 'GitHub updated files could not be loaded' })
+      }
+    })
+  }, [applyGitHubStatus, hydrateNotes])
+
+  useEffect(() => {
+    if (!githubStatus.authenticated) return
     const removeExpiredScratchNotes = () => {
       const currentNotes = useNotesStore.getState().notes
       const expiredIds = getExpiredScratchIds(currentNotes, Date.now())
@@ -58,9 +143,10 @@ export default function App() {
     removeExpiredScratchNotes()
     const interval = setInterval(removeExpiredScratchNotes, 60000)
     return () => clearInterval(interval)
-  }, [deleteNote])
+  }, [deleteNote, githubStatus.authenticated])
 
   useEffect(() => {
+    if (!githubStatus.authenticated) return
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
@@ -84,7 +170,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [githubStatus.authenticated])
 
   useEffect(() => {
     const theme = darkMode ? 'dark' : 'light'
@@ -105,6 +191,12 @@ export default function App() {
       setCalendarStripVisible(false)
     }
   }, [rightPanelOpen])
+
+  if (githubChecking) {
+    return <div className="flex h-screen w-screen items-center justify-center bg-bg text-xs text-muted">handin</div>
+  }
+
+  if (!githubStatus.authenticated) return <GitHubOnboarding />
 
   return (
     <div data-theme={darkMode ? 'dark' : 'light'} className="flex h-screen w-screen bg-bg text-fg overflow-hidden">

@@ -11,11 +11,11 @@ import ArrowIcon from '../ArrowIcon'
 const inputCommands = new Set(['new-sub-note', 'add-task'])
 const documentReturnPositions = new Map<string, number>()
 
-function insertSubnoteToken(content: string, position: number, title: string) {
+function insertSubnoteToken(content: string, position: number, noteId: string, title: string) {
   const safePosition = Math.max(0, Math.min(position, content.length))
   const before = content.slice(0, safePosition)
   const after = content.slice(safePosition)
-  const token = `[[subnote:${encodeURIComponent(title)}]]`
+  const token = `[[subnote:${noteId}:${encodeURIComponent(title)}]]`
   const leadingBreak = before && !before.endsWith('\n') ? '\n' : ''
   const trailingBreak = after && !after.startsWith('\n') ? '\n' : ''
   return `${before}${leadingBreak}${token}${trailingBreak}${after}`
@@ -86,7 +86,7 @@ export default function CommandPalette() {
         }
         const note = addNote({ title: args || 'Untitled', parentId: activeNoteId })
         const cursorPosition = getDocumentCursorPosition(activeNoteId, parentNote.content.length)
-        const nextContent = insertSubnoteToken(parentNote.content, cursorPosition, note.title)
+        const nextContent = insertSubnoteToken(parentNote.content, cursorPosition, note.id, note.title)
         updateNote(parentNote.id, { content: nextContent })
         const savedParent = useNotesStore.getState().getNote(parentNote.id)
         if (savedParent) window.api?.writeNote(savedParent)

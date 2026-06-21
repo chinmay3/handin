@@ -114,9 +114,13 @@ describe('note files', () => {
     expect(parseNoteFile(path, readFileSync(path, 'utf-8'), false).title).toBe('Untitled')
   })
 
-  it.fails('continues loading when metadata is malformed', () => {
+  it('continues loading when metadata is malformed', () => {
     const { notes, scratch } = makeDirectories()
     writeFileSync(join(notes, 'broken.md'), '<!-- handin:{broken} -->\n# Recover me\n\nbody')
-    expect(() => readNoteFiles(notes, scratch)).not.toThrow()
+    expect(readNoteFiles(notes, scratch)[0]).toMatchObject({
+      id: 'broken',
+      title: 'Recover me',
+      content: 'body'
+    })
   })
 })

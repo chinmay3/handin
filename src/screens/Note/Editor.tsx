@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { useNotesStore } from '../../store/notes'
 import { useUIStore } from '../../store/ui'
 import { useTasksStore } from '../../store/tasks'
@@ -29,10 +29,23 @@ const editorTextStyle = {
   letterSpacing: '0px'
 }
 
+function decodeSubnoteTitle(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
 function migrateLegacySubnoteTokens(content: string, notes: { id: string; title: string }[]) {
-  return content.replace(/\[\[subnote:([^:\]\n]+):([^\]\n]+)\]\]/g, (_, noteId: string, encodedTitle: string) => {
-    const title = notes.find(note => note.id === noteId)?.title || decodeURIComponent(encodedTitle)
-    return `[[subnote:${encodeURIComponent(title)}]]`
+  const refreshed = content.replace(/\[\[subnote:([^:\]\n]+):([^\]\n]+)\]\]/g, (token, noteId: string) => {
+    const note = notes.find(item => item.id === noteId)
+    return note ? `[[subnote:${note.id}:${encodeURIComponent(note.title)}]]` : token
+  })
+  return refreshed.replace(/\[\[subnote:([^:\]\n]+)\]\]/g, (token, encodedTitle: string) => {
+    const title = decodeSubnoteTitle(encodedTitle)
+    const note = notes.find(item => item.title === title)
+    return note ? `[[subnote:${note.id}:${encodeURIComponent(note.title)}]]` : token
   })
 }
 
@@ -43,11 +56,13 @@ function renderLine(
   childNotes: { id: string; title: string }[]
 ) {
   const trimmedLine = line.trim()
-  const legacySubnote = trimmedLine.match(LEGACY_SUBNOTE_TOKEN_REGEX)
-  const subnote = trimmedLine.match(SUBNOTE_TOKEN_REGEX)
-  if (subnote) {
-    const title = decodeURIComponent(legacySubnote?.[2] || subnote[1])
-    const noteId = legacySubnote?.[1] || childNotes.find(note => note.title === title)?.id
+  const canonicalSubnote = trimmedLine.match(LEGACY_SUBNOTE_TOKEN_REGEX)
+  const subnote = canonicalSubnote ? null : trimmedLine.match(SUBNOTE_TOKEN_REGEX)
+  if (canonicalSubnote || subnote) {
+    const encodedTitle = canonicalSubnote?.[2] || subnote?.[1] || ''
+    const decodedTitle = decodeSubnoteTitle(encodedTitle)
+    const noteId = canonicalSubnote?.[1] || childNotes.find(note => note.title === decodedTitle)?.id
+    const title = childNotes.find(note => note.id === noteId)?.title || decodedTitle
     const selected = selectedSubnoteToken === trimmedLine
     return (
       <button
@@ -70,7 +85,7 @@ function renderLine(
 
   return line.split(TOKEN_REGEX).map((part, index) => {
     if (part === ARROW_TOKEN) {
-      return <ArrowIcon key={index} variant="arrow" className="inline-block h-[0.9em] w-[1.45em] align-[-0.08em]" />
+      return <span key={index} data-inline-arrow="true">{ARROW_TOKEN}</span>
     }
 
     return /^https?:\/\/[^\s]+$/.test(part) ? (
@@ -113,10 +128,18 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const pendingCursorPosition = useRef<number | null>(null)
+  const childNotesVersion = allNotes
+    .filter(item => item.parentId === noteId)
+    .map(item => `${item.id}:${item.title}`)
+    .join('|')
 
   useEffect(() => {
     if (note) {
-      const normalizedContent = migrateLegacySubnoteTokens(note.content, allNotes)
+      const normalizedContent = migrateLegacySubnoteTokens(
+        note.content,
+        allNotes.filter(item => item.parentId === note.id)
+      )
       setTitle(note.title)
       setContent(normalizedContent)
       setLocalNoteId(noteId)
@@ -126,7 +149,7 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
       setContent('')
       setLocalNoteId(null)
     }
-  }, [noteId])
+  }, [childNotesVersion, note?.content, note?.title, noteId, updateNote])
 
   useEffect(() => {
     if (!localNoteId) return
@@ -138,6 +161,13 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
     }, 2000)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [localNoteId, title, content, updateNote])
+
+  useLayoutEffect(() => {
+    if (pendingCursorPosition.current === null || !textareaRef.current) return
+    const position = pendingCursorPosition.current
+    pendingCursorPosition.current = null
+    textareaRef.current.setSelectionRange(position, position)
+  }, [content])
 
   const handleTitleChange = (value: string) => {
     setTitle(value)
@@ -156,20 +186,11 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
     }
   }
 
-  const handleContentChange = (value: string) => {
-    const rawCursorPos = textareaRef.current?.selectionStart || 0
+  const handleContentChange = (value: string, rawCursorPos: number) => {
     const next = normalizeArrows(value, rawCursorPos)
+    if (next.value !== value) pendingCursorPosition.current = next.cursorPos
     setContent(next.value)
     if (localNoteId) setDocumentCursorPosition(localNoteId, next.cursorPos)
-
-    if (next.value !== value) {
-      requestAnimationFrame(() => {
-        if (textareaRef.current) {
-          textareaRef.current.selectionStart = next.cursorPos
-          textareaRef.current.selectionEnd = next.cursorPos
-        }
-      })
-    }
 
     if (!localNoteId && title.trim()) {
       const n = addNote({ title })
@@ -323,7 +344,7 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
           ref={textareaRef}
           data-note-editor={localNoteId || undefined}
           value={content}
-          onChange={e => handleContentChange(e.target.value)}
+          onChange={e => handleContentChange(e.target.value, e.target.selectionStart)}
           onSelect={handleEditorSelection}
           onScroll={handleScroll}
           className={`note-editor-input absolute inset-0 z-0 w-full h-full bg-transparent text-transparent resize-none overflow-hidden ${

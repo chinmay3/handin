@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 const values = new Map<string, string>()
@@ -29,19 +29,23 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
   value: ResizeObserverMock
 })
 
-Object.defineProperty(globalThis, 'matchMedia', {
-  configurable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn()
-  }))
-})
+function installMatchMedia() {
+  Object.defineProperty(globalThis, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  })
+}
+
+beforeEach(installMatchMedia)
 
 Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
   configurable: true,
