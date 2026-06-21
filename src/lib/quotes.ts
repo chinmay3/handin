@@ -48,7 +48,27 @@ const quotes = [
   { text: "Imagination is the beginning of creation.", author: "George Bernard Shaw" },
   { text: "There is no greater agony than bearing an untold story inside you.", author: "Maya Angelou" },
   { text: "I do not over-intellectualize the production process. I try to keep it simple: Tell the damned story.", author: "Tom Clancy" },
-  { text: "Quantity produces quality. If you only write a few things, you're doomed.", author: "Ray Bradbury" }
+  { text: "Quantity produces quality. If you only write a few things, you're doomed.", author: "Ray Bradbury" },
+  { text: "The poet doesn't invent. He listens.", author: "Jean Cocteau" },
+  { text: "If there's a voice in your head saying, 'You can't paint,' you must surely paint, and silence that voice.", author: "Vincent van Gogh" },
+  { text: "Your first draft doesn't matter. Nobody's ever going to see your first draft. Nobody cares about your first draft.", author: "Neil Gaiman" },
+  { text: "If you only write when you're inspired, you may be a fairly decent poet, but you're never going to be a novelist because you're going to have to make your word count each day and the words aren't going to wait for you to be inspired.", author: "Neil Gaiman" },
+  { text: "If you plan on being read by more than one person, you can't possibly please everybody, so you might as well not bother.", author: "Diana Gabaldon" },
+  { text: "Well, fine. Write your own book and leave out the heraldry. I don't care. This is my book, so I'm leaving in the heraldry.", author: "George R. R. Martin" },
+  { text: "Write drunk, edit sober.", author: "Ernest Hemingway" },
+  { text: "If I waited for perfection, I wouldn't write a thing.", author: "Margaret Atwood" },
+  { text: "If your first scene doesn't give you a hard-on, throw it away!", author: "Samuel Fuller" },
+  { text: "If you steal from one person, it's plagiarism. If you steal from a hundred, it's research. I do a lot of research.", author: "George R. R. Martin" },
+  { text: "Every artist has thousands of bad drawings in them, and the only way to get rid of them is to draw them out.", author: "Chuck Jones" },
+  { text: "The only writer to whom you should compare yourself is the writer you were yesterday.", author: "David Schlosser" },
+  { text: "A professional writer is an amateur who didn't quit.", author: "Richard Bach" },
+  { text: "If you're only going to write when you're inspired, you may be a fairly decent poet, but you will never be a novelist.", author: "Neil Gaiman" },
+  { text: "How do I know what I think until I see what I say?", author: "E. M. Forster" },
+  { text: "Fiction is the lie that tells the truth.", author: "Albert Camus" },
+  { text: "Write. No amount of self-inflicted misery, altered states, black pullovers or being publicly obnoxious will ever add up to your being a writer. Writers write. On you go.", author: "A. L. Kennedy" },
+  { text: "Mind your backups!", author: "Many writers who suffered hard-disk failure, 1985-2019" },
+  { text: "Don't be the best at what you do. Be the only person who does what you do.", author: "Unknown" },
+  { text: "I know writers who use subtext, and they're all cowards.", author: "Garth Marenghi" }
 ]
 
 export function getRandomQuote() {

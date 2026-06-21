@@ -2,37 +2,33 @@ import { motion } from 'framer-motion'
 import { useUIStore } from '../../store/ui'
 import { overlayBg, spring } from '../../lib/transitions'
 
-const helpContent = `handin — quick reference
+const commands = [
+  ['new-sub-note [name]', 'create a linked sub-note'],
+  ['add-task [task]', "add to this document's connected list"],
+  ['scratch', 'temporary note (24h)'],
+  ['save', 'convert scratch to permanent'],
+  ['up', 'remember position and go to document top'],
+  ['down', 'return to remembered position'],
+  ['home', 'go to home'],
+  ['settings', 'open settings'],
+  ['toggle-sidebar', 'show or hide sidebar'],
+  ['toggle-calendar', 'show or hide calendar']
+]
 
-commands (press ⌘ + K)
+const navigation = [['sidebar', 'notes + task lists']]
 
-  new-sub-note [name]          create a linked sub-note
-  add-task [task]              add to this document's connected list
-  scratch                      temporary note (24h)
-  save                         convert scratch to permanent
-  up                           remember position and go to document top
-  down                         return to remembered position
-  home                         go to home
-  settings                     open settings
-  toggle-sidebar               show or hide sidebar
-  toggle-calendar              show or hide calendar
+const keyboard = [
+  ['⌘ + K', 'command palette'],
+  ['Escape', 'go back / close overlay']
+]
 
-navigation
-
-  sidebar                      notes + task lists
-
-keyboard
-
-  ⌘ + K                        command palette
-  Escape                       go back / close overlay
-
-concepts
-
-  notes are markdown files stored in ~/handin/notes/
-  sub-notes link to parent notes via breadcrumbs
-  tasks backlink to the note they were created from
-  scratch notes auto-delete after 24 hours
-  everything autosaves every few seconds`
+const concepts = [
+  'notes are markdown files stored in ~/handin/notes/',
+  'sub-notes link to parent notes via breadcrumbs',
+  'tasks backlink to the note they were created from',
+  'scratch notes auto-delete after 24 hours',
+  'everything autosaves every few seconds'
+]
 
 export default function HelpNote() {
   const toggleHelp = useUIStore(s => s.toggleHelp)
@@ -62,12 +58,35 @@ export default function HelpNote() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-4">
-          <pre className="text-xs text-dim leading-relaxed whitespace-pre-wrap font-mono">
-            {helpContent}
-          </pre>
+        <div className="flex-1 overflow-auto px-6 py-5 text-xs text-dim">
+          <div className="mb-6 text-sm text-fg">handin — quick reference</div>
+          <HelpRows title="commands (press ⌘ + K)" rows={commands} />
+          <HelpRows title="navigation" rows={navigation} />
+          <HelpRows title="keyboard" rows={keyboard} />
+          <section>
+            <div className="mb-3 text-[10px] uppercase tracking-widest text-muted">concepts</div>
+            <div className="space-y-2 leading-relaxed">
+              {concepts.map(concept => <div key={concept}>{concept}</div>)}
+            </div>
+          </section>
         </div>
       </motion.div>
     </motion.div>
+  )
+}
+
+function HelpRows({ title, rows }: { title: string; rows: string[][] }) {
+  return (
+    <section className="mb-6">
+      <div className="mb-3 text-[10px] uppercase tracking-widest text-muted">{title}</div>
+      <div className="grid grid-cols-[minmax(170px,auto)_1fr] gap-x-8 gap-y-2 leading-relaxed">
+        {rows.map(([label, description]) => (
+          <div key={label} className="contents">
+            <div className="whitespace-nowrap text-fg">{label}</div>
+            <div>{description}</div>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

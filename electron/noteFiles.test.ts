@@ -95,4 +95,28 @@ describe('note files', () => {
     deleteNoteFile('note-123', notes, scratch)
     expect(existsSync(join(notes, 'note-123.md'))).toBe(false)
   })
+
+  it('rejects unsafe note ids', () => {
+    const { notes, scratch } = makeDirectories()
+    expect(() => writeNoteFile(makeNote({ id: '../outside' }), notes, scratch)).toThrow('Invalid note id')
+    expect(() => deleteNoteFile('../outside', notes, scratch)).toThrow('Invalid note id')
+  })
+
+  it('rejects unsafe legacy file paths', () => {
+    const { notes, scratch } = makeDirectories()
+    expect(() => deleteLegacyNoteFile('../note.md', false, notes, scratch)).toThrow('Invalid legacy file name')
+  })
+
+  it('normalizes multiline and blank titles', () => {
+    const { notes } = makeDirectories()
+    const path = join(notes, 'note-123.md')
+    writeFileSync(path, serializeNote(makeNote({ title: '\n' })))
+    expect(parseNoteFile(path, readFileSync(path, 'utf-8'), false).title).toBe('Untitled')
+  })
+
+  it.fails('continues loading when metadata is malformed', () => {
+    const { notes, scratch } = makeDirectories()
+    writeFileSync(join(notes, 'broken.md'), '<!-- handin:{broken} -->\n# Recover me\n\nbody')
+    expect(() => readNoteFiles(notes, scratch)).not.toThrow()
+  })
 })

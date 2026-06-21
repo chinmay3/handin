@@ -51,4 +51,45 @@ describe('note persistence helpers', () => {
     ]
     expect(getExpiredScratchIds(notes, 20)).toEqual(['expired'])
   })
+
+  it('keeps a newer local structured note', () => {
+    const local = note('same-id', { content: 'local', updatedAt: 20 })
+    const disk = note('same-id', { content: 'disk', updatedAt: 10 })
+    expect(mergeDiskNotes([local], [disk]).notes).toEqual([local])
+  })
+
+  it('uses a newer structured disk note', () => {
+    const local = note('same-id', { content: 'local', updatedAt: 10 })
+    const disk = note('same-id', { content: 'disk', updatedAt: 20 })
+    expect(mergeDiskNotes([local], [disk]).notes).toEqual([disk])
+  })
+
+  it('keeps notes that exist on only one side', () => {
+    const local = note('local')
+    const disk = note('disk')
+    expect(mergeDiskNotes([local], [disk]).notes).toEqual([disk, local])
+  })
+
+  it.fails('honors deletion of a structured note from disk after initialization', () => {
+    const deletedOnDisk = note('deleted')
+    expect(mergeDiskNotes([deletedOnDisk], []).notes).toEqual([])
+  })
+
+  it('does not match a scratch legacy note to a permanent note', () => {
+    const local = note('local', { title: 'Same' })
+    const disk = {
+      ...note('legacy', { title: 'Same', isScratch: true, scratchExpiresAt: 20 }),
+      legacyFileName: 'same.md',
+      legacyScratch: true
+    }
+    expect(mergeDiskNotes([local], [disk]).notes.map(item => item.id)).toEqual(['legacy', 'local'])
+  })
+
+  it('handles cyclic parent data without looping', () => {
+    const notes = [
+      note('one', { parentId: 'two' }),
+      note('two', { parentId: 'one' })
+    ]
+    expect(getNoteTreeIds(notes, 'one')).toEqual(['one', 'two'])
+  })
 })
