@@ -1,0 +1,240 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Courbe Sans';
+  src: url('../../fonts/CourbeSans.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merta Sans';
+  src: url('../../fonts/MertaSans-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merta Sans';
+  src: url('../../fonts/MertaSans-Medium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merta Sans';
+  src: url('../../fonts/MertaSans-SemiBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merta Sans';
+  src: url('../../fonts/MertaSans-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root,
+[data-theme='light'] {
+  --color-bg: 247 247 245;
+  --color-surface: 241 241 238;
+  --color-raised: 231 231 227;
+  --color-border: 200 200 194;
+  --color-muted: 119 119 119;
+  --color-subtle: 153 153 153;
+  --color-fg: 20 20 20;
+  --color-dim: 68 68 65;
+  --color-link: 17 85 204;
+}
+
+[data-theme='dark'] {
+  --color-bg: 30 31 34;
+  --color-surface: 37 38 43;
+  --color-raised: 47 49 54;
+  --color-border: 67 70 78;
+  --color-muted: 150 156 166;
+  --color-subtle: 111 118 129;
+  --color-fg: 238 242 247;
+  --color-dim: 204 211 219;
+  --color-link: 122 162 247;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-theme='dark'] .bg-bg {
+  background-color: rgb(var(--color-bg));
+}
+
+[data-theme='dark'] .bg-surface {
+  background-color: rgb(var(--color-surface));
+}
+
+[data-theme='dark'] .bg-raised {
+  background-color: rgb(var(--color-raised));
+}
+
+[data-theme='dark'] .bg-fg {
+  background-color: rgb(var(--color-fg));
+}
+
+[data-theme='dark'] .bg-muted {
+  background-color: rgb(var(--color-muted));
+}
+
+[data-theme='dark'] .bg-subtle {
+  background-color: rgb(var(--color-subtle));
+}
+
+[data-theme='dark'] .text-fg {
+  color: rgb(var(--color-fg));
+}
+
+[data-theme='dark'] .text-dim {
+  color: rgb(var(--color-dim));
+}
+
+[data-theme='dark'] .text-muted {
+  color: rgb(var(--color-muted));
+}
+
+[data-theme='dark'] .text-subtle {
+  color: rgb(var(--color-subtle));
+}
+
+[data-theme='dark'] .text-bg {
+  color: rgb(var(--color-bg));
+}
+
+[data-theme='dark'] .border-border {
+  border-color: rgb(var(--color-border));
+}
+
+[data-theme='dark'] .placeholder\:text-subtle::placeholder {
+  color: rgb(var(--color-subtle));
+}
+
+[data-theme='dark'] .bg-bg\/90 {
+  background-color: rgb(var(--color-bg) / 0.9);
+}
+
+[data-theme='dark'] .bg-surface\/35 {
+  background-color: rgb(var(--color-surface) / 0.35);
+}
+
+[data-theme='dark'] .bg-surface\/70 {
+  background-color: rgb(var(--color-surface) / 0.7);
+}
+
+[data-theme='dark'] .bg-raised\/50 {
+  background-color: rgb(var(--color-raised) / 0.5);
+}
+
+[data-theme='dark'] .bg-subtle\/30 {
+  background-color: rgb(var(--color-subtle) / 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: rgb(var(--color-bg));
+  color: rgb(var(--color-fg));
+  font-family: 'Merta Sans', 'Avenir Next', Avenir, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(var(--color-raised));
+  color: rgb(var(--color-fg));
+}
+
+.subnote-selection-hidden::selection {
+  background: transparent;
+  color: transparent;
+}
+
+.note-editor-input::selection {
+  color: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-subtle));
+}
+
+.document-scroll {
+  scrollbar-width: none;
+}
+
+.document-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+textarea {
+  font-family: 'Merta Sans', 'Avenir Next', Avenir, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  resize: none;
+}
+
+button, input, select {
+  font-family: inherit;
+}
+
+.handin-wordmark {
+  color: #e9692c;
+  font-family: 'Courbe Sans', 'Avenir Next', Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+.handin-wordmark:hover {
+  color: #f07a3d;
+}
+
+textarea:focus {
+  outline: none;
+}
+
+input:focus {
+  outline: none;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
