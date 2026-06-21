@@ -29,3 +29,5 @@ merta_sans/
 tt-wellingtons-font-family/
 fonts/*.otf
 fonts/*.ttf
+public/fonts/*.otf
+public/fonts/*.ttf

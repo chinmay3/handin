@@ -4,6 +4,7 @@ import { useUIStore } from '../../store/ui'
 import { useNotesStore } from '../../store/notes'
 import { useTasksStore } from '../../store/tasks'
 import SearchBar from '../../components/SearchBar'
+import ItemMarker from '../../components/ItemMarker'
 import { fadeIn } from '../../lib/transitions'
 
 export default function Home() {
@@ -48,12 +49,12 @@ export default function Home() {
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col px-6 py-4 overflow-auto">
-          <section>
+          <section className="w-full max-w-3xl">
             <div className="flex items-center justify-between px-3 py-2">
               <div className="text-xs text-dim font-medium tracking-wider uppercase">projects</div>
               <button
                 onClick={() => setCreatingProject(true)}
-                className="h-6 w-6 flex items-center justify-center text-subtle hover:text-fg hover:bg-surface rounded transition-colors"
+                className="h-8 w-8 flex items-center justify-center text-subtle hover:text-fg hover:bg-surface rounded transition-colors"
                 title="New project"
               >
                 +
@@ -95,7 +96,7 @@ export default function Home() {
                         onClick={() => openNote(note.id)}
                         className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface transition-colors flex items-center gap-3 group"
                       >
-                        <span className="text-subtle text-xs">{children.length > 0 ? '▪' : '◇'}</span>
+                        <ItemMarker kind={children.length > 0 ? 'project' : 'note'} />
                         <span className="text-sm text-fg group-hover:text-fg">{note.title || 'Untitled'}</span>
                       </button>
                       {children.length > 0 && (
@@ -106,7 +107,7 @@ export default function Home() {
                               onClick={() => openNote(child.id)}
                               className="w-full text-left px-3 py-1 rounded hover:bg-surface transition-colors flex items-center gap-2"
                             >
-                              <span className="text-subtle text-[10px]">◇</span>
+                              <ItemMarker kind="note" className="h-1 w-1" />
                               <span className="text-xs text-dim">{child.title || 'Untitled'}</span>
                             </button>
                           ))}
@@ -121,12 +122,12 @@ export default function Home() {
             )}
           </section>
 
-          <section className="mt-8 pb-8">
+          <section className="mt-8 w-full max-w-3xl pb-8">
             <div className="flex items-center justify-between px-3 py-2">
               <div className="text-xs text-dim font-medium tracking-wider uppercase">task lists</div>
               <button
                 onClick={() => setCreatingTaskList(true)}
-                className="h-6 w-6 flex items-center justify-center text-subtle hover:text-fg hover:bg-surface rounded transition-colors"
+                className="h-8 w-8 flex items-center justify-center text-subtle hover:text-fg hover:bg-surface rounded transition-colors"
                 title="New task list"
               >
                 +
@@ -177,7 +178,7 @@ export default function Home() {
                       className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface transition-colors flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing"
                     >
                       <span className="flex items-center gap-3 min-w-0">
-                        <span className="text-subtle text-xs">▫</span>
+                        <ItemMarker kind="task" />
                         <span className="text-sm text-fg truncate">{list.name}</span>
                       </span>
                       {count > 0 && <span className="text-xs text-subtle">{count}</span>}

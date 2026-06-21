@@ -15,7 +15,6 @@ const commands: Command[] = [
   { name: 'add-task', icon: '▫', description: 'Add a task to this document’s connected list', usage: 'add-task [task]', context: 'document' },
   { name: 'scratch', icon: '◦', description: 'Open a temporary note that expires in 24 hours', usage: 'scratch' },
   { name: 'save', icon: '◉', description: 'Convert the current scratch note to permanent', usage: 'save' },
-  { name: 'history', icon: '◷', description: 'Toggle history on the current note', usage: 'history' },
   { name: 'home', icon: '⌂', description: 'Go to the home page', usage: 'home' },
   { name: 'settings', icon: '◎', description: 'Open settings', usage: 'settings' },
   { name: 'toggle-sidebar', icon: '◫', description: 'Show or hide the sidebar', usage: 'toggle-sidebar' },

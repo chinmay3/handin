@@ -4,7 +4,7 @@
 
 @font-face {
   font-family: 'Courbe Sans';
-  src: url('../../fonts/CourbeSans.otf') format('opentype');
+  src: url('/fonts/CourbeSans.otf') format('opentype');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -12,7 +12,7 @@
 
 @font-face {
   font-family: 'Merta Sans';
-  src: url('../../fonts/MertaSans-Regular.ttf') format('truetype');
+  src: url('/fonts/MertaSans-Regular.ttf') format('truetype');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -20,7 +20,7 @@
 
 @font-face {
   font-family: 'Merta Sans';
-  src: url('../../fonts/MertaSans-Medium.ttf') format('truetype');
+  src: url('/fonts/MertaSans-Medium.ttf') format('truetype');
   font-style: normal;
   font-weight: 500;
   font-display: swap;
@@ -28,7 +28,7 @@
 
 @font-face {
   font-family: 'Merta Sans';
-  src: url('../../fonts/MertaSans-SemiBold.ttf') format('truetype');
+  src: url('/fonts/MertaSans-SemiBold.ttf') format('truetype');
   font-style: normal;
   font-weight: 600;
   font-display: swap;
@@ -36,7 +36,7 @@
 
 @font-face {
   font-family: 'Merta Sans';
-  src: url('../../fonts/MertaSans-Bold.ttf') format('truetype');
+  src: url('/fonts/MertaSans-Bold.ttf') format('truetype');
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -176,6 +176,14 @@ html, body, #root {
   color: transparent;
 }
 
+[data-document-line] {
+  transition: background-color 180ms ease;
+}
+
+[data-heading-target='true'] {
+  background: rgb(var(--color-raised));
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -211,6 +219,16 @@ textarea {
 
 button, input, select {
   font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 1px solid rgb(var(--color-fg));
+  outline-offset: 2px;
 }
 
 .handin-wordmark {

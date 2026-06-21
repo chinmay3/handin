@@ -18,8 +18,6 @@ export default function NoteScreen({ noteId }: Props) {
   const taskLists = useTasksStore(s => s.taskLists)
   const notes = useNotesStore(s => s.notes)
   const openNote = useUIStore(s => s.openNote)
-  const toggleHistory = useUIStore(s => s.toggleHistory)
-  const historyVisible = useUIStore(s => s.historyVisible)
   const sidebarOpen = useUIStore(s => s.sidebarOpen)
   const [taskListDragOver, setTaskListDragOver] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -129,14 +127,6 @@ export default function NoteScreen({ noteId }: Props) {
           {breadcrumbs.length > 0 && <span className="text-dim">{note.title}</span>}
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleHistory}
-            className={`text-xs transition-colors ${historyVisible ? 'text-fg' : 'text-subtle hover:text-dim'}`}
-          >
-            ◷
-          </button>
-        </div>
       </div>
 
       {note.isScratch && scratchTimeLeft && (

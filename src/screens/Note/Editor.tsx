@@ -4,6 +4,7 @@ import { useUIStore } from '../../store/ui'
 import { useTasksStore } from '../../store/tasks'
 import ArrowIcon from '../../components/ArrowIcon'
 import { setDocumentCursorPosition } from '../../lib/documentCursor'
+import ItemMarker from '../../components/ItemMarker'
 
 interface Props {
   noteId: string | null
@@ -132,10 +133,8 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       updateNote(localNoteId, { title, content })
-      if (window.api) {
-        const fn = `${title.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase() || 'untitled'}.md`
-        window.api.writeNote(fn, `# ${title}\n\n${content}`)
-      }
+      const savedNote = useNotesStore.getState().getNote(localNoteId)
+      if (savedNote) window.api?.writeNote(savedNote)
     }, 2000)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [localNoteId, title, content, updateNote])
@@ -235,7 +234,7 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
                   onClick={() => openTaskOverlay(attachedTaskList.id)}
                   className="min-w-0 flex items-center gap-2 text-left hover:text-fg transition-colors"
                 >
-                  <span className="text-subtle">▫</span>
+                  <ItemMarker kind="task" />
                   <span className="tracking-wider uppercase shrink-0">working with</span>
                   <span className="truncate text-fg">{attachedTaskList.name}</span>
                 </button>
@@ -309,7 +308,11 @@ export default function Editor({ noteId, onNoteCreated, taskListDragOver = false
             <span className="text-muted">start writing...</span>
           ) : (
             lines.map((line, i) => (
-              <div key={i} className={line.trim().startsWith('- ') ? 'text-fg font-bold' : 'text-fg'}>
+              <div
+                key={i}
+                data-document-line={i}
+                className={line.trim().startsWith('- ') ? 'text-fg font-bold' : 'text-fg'}
+              >
                 {line ? renderLine(line, openNote, selectedSubnoteToken, childNotes) : '​'}
               </div>
             ))

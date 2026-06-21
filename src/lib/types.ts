@@ -63,4 +63,4 @@ export interface CalendarEvent {
   createdAt: number
 }
 
-export type Screen = 'home' | 'note' | 'graph' | 'account'
+export type Screen = 'home' | 'note'

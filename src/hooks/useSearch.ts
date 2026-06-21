@@ -19,6 +19,7 @@ export function useSearch(query: string) {
       ...tasks.map(t => ({
         type: 'task' as const,
         id: t.id,
+        listId: t.listId,
         title: t.name,
         body: '',
         timestamp: t.dueDate || 0

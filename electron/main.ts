@@ -1,6 +1,8 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, unlinkSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
+import type { Note } from '../src/lib/types'
+import { deleteLegacyNoteFile, deleteNoteFile, readNoteFiles, writeNoteFile } from './noteFiles'
 
 const HANDIN_DIR = join(app.getPath('home'), 'handin')
 const NOTES_DIR = join(HANDIN_DIR, 'notes')
@@ -21,7 +23,7 @@ function createWindow() {
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#ffffff',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -32,37 +34,28 @@ function createWindow() {
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+    return { action: 'deny' }
+  })
 }
 
 app.whenReady().then(() => {
   ensureDirs()
 
-  ipcMain.handle('write-note', (_, fileName: string, content: string) => {
-    writeFileSync(join(NOTES_DIR, fileName), content, 'utf-8')
+  ipcMain.handle('write-note', (_, note: Note) => {
+    writeNoteFile(note, NOTES_DIR, SCRATCH_DIR)
   })
 
-  ipcMain.handle('read-notes', () => {
-    if (!existsSync(NOTES_DIR)) return []
-    return readdirSync(NOTES_DIR)
-      .filter(f => f.endsWith('.md'))
-      .map(f => ({
-        fileName: f,
-        content: readFileSync(join(NOTES_DIR, f), 'utf-8')
-      }))
+  ipcMain.handle('read-notes', () => readNoteFiles(NOTES_DIR, SCRATCH_DIR))
+
+  ipcMain.handle('delete-note', (_, id: string) => {
+    deleteNoteFile(id, NOTES_DIR, SCRATCH_DIR)
   })
 
-  ipcMain.handle('delete-note', (_, fileName: string) => {
-    const p = join(NOTES_DIR, fileName)
-    if (existsSync(p)) unlinkSync(p)
-  })
-
-  ipcMain.handle('write-scratch', (_, fileName: string, content: string) => {
-    writeFileSync(join(SCRATCH_DIR, fileName), content, 'utf-8')
-  })
-
-  ipcMain.handle('delete-scratch', (_, fileName: string) => {
-    const p = join(SCRATCH_DIR, fileName)
-    if (existsSync(p)) unlinkSync(p)
+  ipcMain.handle('delete-legacy-note', (_, fileName: string, isScratch: boolean) => {
+    deleteLegacyNoteFile(fileName, isScratch, NOTES_DIR, SCRATCH_DIR)
   })
 
   createWindow()

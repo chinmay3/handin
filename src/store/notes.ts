@@ -4,6 +4,7 @@ import { Note } from '../lib/types'
 
 interface NotesState {
   notes: Note[]
+  hydrateNotes: (notes: Note[]) => void
   addNote: (note: Partial<Note> & { title: string }) => Note
   updateNote: (id: string, updates: Partial<Note>) => void
   deleteNote: (id: string) => void
@@ -17,6 +18,8 @@ export const useNotesStore = create<NotesState>()(
   persist(
     (set, get) => ({
       notes: [],
+
+      hydrateNotes: (notes) => set({ notes }),
 
       addNote: (partial) => {
         const note: Note = {
@@ -44,9 +47,16 @@ export const useNotesStore = create<NotesState>()(
       },
 
       deleteNote: (id) => {
-        set(s => ({
-          notes: s.notes.filter(n => n.id !== id && n.parentId !== id)
-        }))
+        set(s => {
+          const ids = new Set<string>()
+          const visit = (noteId: string) => {
+            if (ids.has(noteId)) return
+            ids.add(noteId)
+            s.notes.filter(note => note.parentId === noteId).forEach(note => visit(note.id))
+          }
+          visit(id)
+          return { notes: s.notes.filter(note => !ids.has(note.id)) }
+        })
       },
 
       getNote: (id) => get().notes.find(n => n.id === id),

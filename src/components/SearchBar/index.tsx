@@ -9,6 +9,7 @@ export default function SearchBar() {
   const [focused, setFocused] = useState(false)
   const results = useSearch(query)
   const openNote = useUIStore(s => s.openNote)
+  const openTaskOverlay = useUIStore(s => s.openTaskOverlay)
 
   return (
     <div className="relative no-focus-capture">
@@ -41,6 +42,7 @@ export default function SearchBar() {
                 key={r.id}
                 onMouseDown={() => {
                   if (r.type === 'note') openNote(r.id)
+                  else openTaskOverlay(r.listId, r.id)
                   setQuery('')
                 }}
                 className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-raised transition-colors"

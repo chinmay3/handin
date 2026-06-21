@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useUIStore } from './store/ui'
 import { useNotesStore } from './store/notes'
 import Home from './screens/Home'
 import NoteScreen from './screens/Note'
-import Graph from './screens/Graph'
 import Account from './screens/Account'
 import Calendar from './screens/Home/Calendar'
 import Quote from './screens/Home/Quote'
@@ -15,13 +14,16 @@ import ArrowIcon from './components/ArrowIcon'
 import CommandPalette from './components/CommandPalette'
 import { spring } from './lib/transitions'
 import { setDocumentCursorPosition } from './lib/documentCursor'
+import { mergeDiskNotes } from './lib/notePersistence'
+import { getExpiredScratchIds, getNoteTreeIds } from './lib/noteTree'
 
 export default function App() {
-  const { activeScreen, activeNoteId, sidebarOpen, rightPanelOpen, taskOverlayListId, helpOpen, graphOpen, accountOpen, commandPaletteOpen, quotesEnabled, darkMode } = useUIStore()
-  const notes = useNotesStore(s => s.notes)
+  const { activeScreen, activeNoteId, sidebarOpen, rightPanelOpen, taskOverlayListId, helpOpen, accountOpen, commandPaletteOpen, quotesEnabled, darkMode } = useUIStore()
   const deleteNote = useNotesStore(s => s.deleteNote)
+  const hydrateNotes = useNotesStore(s => s.hydrateNotes)
   const toggleRightPanel = useUIStore(s => s.toggleRightPanel)
   const [calendarStripVisible, setCalendarStripVisible] = useState(false)
+  const noteFilesInitialized = useRef(false)
 
   const hideCalendarStrip = () => {
     setCalendarStripVisible(false)
@@ -32,14 +34,31 @@ export default function App() {
   }
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now()
-      notes
-        .filter(n => n.isScratch && n.scratchExpiresAt && n.scratchExpiresAt < now)
-        .forEach(n => deleteNote(n.id))
-    }, 60000)
+    if (noteFilesInitialized.current || !window.api) return
+    noteFilesInitialized.current = true
+    window.api.readNotes().then(async diskNotes => {
+      const localNotes = useNotesStore.getState().notes
+      const merged = mergeDiskNotes(localNotes, diskNotes)
+      hydrateNotes(merged.notes)
+      await Promise.all(merged.notes.map(note => window.api!.writeNote(note)))
+      await Promise.all(merged.legacyFiles.map(file => window.api!.deleteLegacyNote(file.fileName, file.isScratch)))
+    }).catch(() => undefined)
+  }, [hydrateNotes])
+
+  useEffect(() => {
+    const removeExpiredScratchNotes = () => {
+      const currentNotes = useNotesStore.getState().notes
+      const expiredIds = getExpiredScratchIds(currentNotes, Date.now())
+      const idsToDelete = new Set(expiredIds.flatMap(id => getNoteTreeIds(currentNotes, id)))
+      idsToDelete.forEach(id => {
+        deleteNote(id)
+        window.api?.deleteNote(id)
+      })
+    }
+    removeExpiredScratchNotes()
+    const interval = setInterval(removeExpiredScratchNotes, 60000)
     return () => clearInterval(interval)
-  }, [notes, deleteNote])
+  }, [deleteNote])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -57,7 +76,6 @@ export default function App() {
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
         if (ui.commandPaletteOpen) ui.setCommandPaletteOpen(false)
-        else if (ui.graphOpen) ui.toggleGraph()
         else if (ui.accountOpen) ui.toggleAccount()
         else if (ui.helpOpen) ui.toggleHelp()
         else if (ui.taskOverlayListId) ui.closeTaskOverlay()
@@ -167,10 +185,6 @@ export default function App() {
 
       <AnimatePresence>
         {taskOverlayListId && <TaskOverlay key="task-overlay" listId={taskOverlayListId} />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {graphOpen && <Graph key="graph" />}
       </AnimatePresence>
 
       <AnimatePresence>

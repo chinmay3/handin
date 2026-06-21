@@ -7,6 +7,9 @@ import { spring } from '../../lib/transitions'
 import { getDocumentHeadings } from '../../lib/headings'
 import ArrowIcon from '../ArrowIcon'
 import EyeIcon from '../EyeIcon'
+import ItemMarker from '../ItemMarker'
+import { getNoteTreeIds } from '../../lib/noteTree'
+import { scrollToDocumentLine } from '../../lib/documentNavigation'
 
 export default function Sidebar() {
   const notes = useNotesStore(s => s.getRootNotes())
@@ -66,6 +69,7 @@ export default function Sidebar() {
 
   const confirmDeleteProject = () => {
     if (!projectToDelete || !canDeleteProject) return
+    getNoteTreeIds(allNotes, projectToDelete.id).forEach(id => window.api?.deleteNote(id))
     deleteNote(projectToDelete.id)
     if (activeNoteId === projectToDelete.id || getChildren(projectToDelete.id).some(child => child.id === activeNoteId)) {
       goHome()
@@ -104,7 +108,7 @@ export default function Sidebar() {
               {sidebarProjectsVisible && (
                 <button
                   onClick={() => setCreatingProject(true)}
-                  className="w-5 h-5 rounded text-sm leading-none text-subtle hover:text-fg hover:bg-raised transition-colors"
+                  className="w-7 h-7 rounded text-sm leading-none text-subtle hover:text-fg hover:bg-raised transition-colors"
                   title="New project"
                 >
                   +
@@ -112,7 +116,7 @@ export default function Sidebar() {
               )}
               <button
                 onClick={toggleSidebarProjects}
-                className="w-5 h-5 rounded flex items-center justify-center text-subtle hover:text-fg hover:bg-raised transition-colors"
+                className="w-7 h-7 rounded flex items-center justify-center text-subtle hover:text-fg hover:bg-raised transition-colors"
                 title={sidebarProjectsVisible ? 'Hide projects' : 'Show projects'}
               >
                 <EyeIcon visible={sidebarProjectsVisible} className="w-3 h-3" />
@@ -161,7 +165,9 @@ export default function Sidebar() {
                       {isExpanded ? '▾' : '▸'}
                     </button>
                   ) : (
-                    <span className="w-4 text-center text-[10px] text-subtle shrink-0">◇</span>
+                    <span className="flex w-4 shrink-0 items-center justify-center">
+                      <ItemMarker kind="note" />
+                    </span>
                   )}
                   <button
                     onClick={() => openNote(note.id)}
@@ -170,7 +176,7 @@ export default function Sidebar() {
                       ${activeNoteId === note.id ? 'bg-raised text-fg' : 'text-dim hover:bg-raised/50 hover:text-fg'}
                     `}
                   >
-                    {hasChildren ? '▪ ' : ''}{note.title || 'Untitled'}
+                    {note.title || 'Untitled'}
                   </button>
                   <button
                     onClick={() => {
@@ -194,7 +200,7 @@ export default function Sidebar() {
                           ${activeNoteId === child.id ? 'bg-raised text-fg' : 'text-subtle hover:bg-raised/50 hover:text-dim'}
                         `}
                       >
-                        <span className="text-[8px]">◇</span>
+                        <ItemMarker kind="note" className="h-1 w-1" />
                         <span className="truncate">{child.title || 'Untitled'}</span>
                       </button>
                     ))}
@@ -214,7 +220,7 @@ export default function Sidebar() {
               {sidebarTaskListsVisible && (
                 <button
                   onClick={() => setCreatingTaskList(true)}
-                  className="w-5 h-5 rounded text-sm leading-none text-subtle hover:text-fg hover:bg-raised transition-colors"
+                  className="w-7 h-7 rounded text-sm leading-none text-subtle hover:text-fg hover:bg-raised transition-colors"
                   title="New task list"
                 >
                   +
@@ -222,7 +228,7 @@ export default function Sidebar() {
               )}
               <button
                 onClick={toggleSidebarTaskLists}
-                className="w-5 h-5 rounded flex items-center justify-center text-subtle hover:text-fg hover:bg-raised transition-colors"
+                className="w-7 h-7 rounded flex items-center justify-center text-subtle hover:text-fg hover:bg-raised transition-colors"
                 title={sidebarTaskListsVisible ? 'Hide task lists' : 'Show task lists'}
               >
                 <EyeIcon visible={sidebarTaskListsVisible} className="w-3 h-3" />
@@ -275,7 +281,7 @@ export default function Sidebar() {
                   className="w-full text-left px-2 py-1 rounded text-xs flex items-center justify-between text-dim hover:bg-raised/50 hover:text-fg transition-colors cursor-grab active:cursor-grabbing"
                 >
                   <span className="flex items-center gap-2 min-w-0">
-                    <span className="text-subtle text-[10px]">▫</span>
+                    <ItemMarker kind="task" />
                     <span className="truncate">{list.name}</span>
                   </span>
                   {count > 0 && (
@@ -315,7 +321,7 @@ export default function Sidebar() {
               {documentHeadings.map(heading => (
                 <button
                   key={heading.id}
-                  onClick={() => openNote(activeNote.id)}
+                  onClick={() => scrollToDocumentLine(heading.line)}
                   className="w-full text-left px-2 py-1 rounded text-xs flex items-center gap-2 text-dim hover:bg-raised/50 hover:text-fg transition-colors"
                 >
                   <span className="text-subtle text-[10px]">-</span>

@@ -12,6 +12,7 @@ interface EventsState {
     reminder: string
     links: TaskLink[]
   }) => CalendarEvent
+  updateEvent: (id: string, updates: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>) => void
   deleteEvent: (id: string) => void
   getEventsByDay: (date: number) => CalendarEvent[]
 }
@@ -29,6 +30,12 @@ export const useEventsStore = create<EventsState>()(
         }
         set(s => ({ events: [...s.events, next] }))
         return next
+      },
+
+      updateEvent: (id, updates) => {
+        set(s => ({
+          events: s.events.map(event => event.id === id ? { ...event, ...updates } : event)
+        }))
       },
 
       deleteEvent: (id) => {

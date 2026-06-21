@@ -6,6 +6,7 @@ import { useUIStore } from '../../store/ui'
 import { spring } from '../../lib/transitions'
 import { Task, TaskStatus } from '../../lib/types'
 import ArrowIcon from '../ArrowIcon'
+import ItemMarker from '../ItemMarker'
 
 interface Props {
   listId: string
@@ -18,6 +19,8 @@ export default function TaskOverlay({ listId }: Props) {
   const uncompleteTask = useTasksStore(s => s.uncompleteTask)
   const updateTaskStatus = useTasksStore(s => s.updateTaskStatus)
   const deleteTask = useTasksStore(s => s.deleteTask)
+  const updateTaskListName = useTasksStore(s => s.updateTaskListName)
+  const deleteTaskList = useTasksStore(s => s.deleteTaskList)
   const addTask = useTasksStore(s => s.addTask)
   const addSubtask = useTasksStore(s => s.addSubtask)
   const completeSubtask = useTasksStore(s => s.completeSubtask)
@@ -26,9 +29,12 @@ export default function TaskOverlay({ listId }: Props) {
   const addTaskLink = useTasksStore(s => s.addTaskLink)
   const deleteTaskLink = useTasksStore(s => s.deleteTaskLink)
   const getNote = useNotesStore(s => s.getNote)
+  const notes = useNotesStore(s => s.notes)
+  const updateNote = useNotesStore(s => s.updateNote)
   const openNote = useUIStore(s => s.openNote)
   const closeTaskOverlay = useUIStore(s => s.closeTaskOverlay)
   const activeNoteId = useUIStore(s => s.activeNoteId)
+  const requestedTaskId = useUIStore(s => s.taskOverlayTaskId)
 
   const [newTaskName, setNewTaskName] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -36,10 +42,17 @@ export default function TaskOverlay({ listId }: Props) {
   const [newLinkUrl, setNewLinkUrl] = useState('')
   const [executionMode, setExecutionMode] = useState(true)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+  const [renamingList, setRenamingList] = useState(false)
+  const [listName, setListName] = useState(taskList?.name || '')
+  const [confirmingListDelete, setConfirmingListDelete] = useState(false)
 
   useEffect(() => {
     setExecutionMode(true)
-  }, [listId])
+    setSelectedTaskId(requestedTaskId)
+    setListName(taskList?.name || '')
+    setRenamingList(false)
+    setConfirmingListDelete(false)
+  }, [listId, requestedTaskId, taskList?.name])
 
   if (!taskList) return null
 
@@ -74,6 +87,27 @@ export default function TaskOverlay({ listId }: Props) {
     setDraggedTaskId(null)
   }
 
+  const saveListName = () => {
+    const name = listName.trim()
+    if (!name) {
+      setListName(taskList.name)
+      setRenamingList(false)
+      return
+    }
+    updateTaskListName(taskList.id, name)
+    setRenamingList(false)
+  }
+
+  const removeTaskList = () => {
+    notes.filter(note => note.taskListId === taskList.id).forEach(note => {
+      updateNote(note.id, { taskListId: null })
+      const savedNote = useNotesStore.getState().getNote(note.id)
+      if (savedNote) window.api?.writeNote(savedNote)
+    })
+    deleteTaskList(taskList.id)
+    closeTaskOverlay()
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -93,12 +127,49 @@ export default function TaskOverlay({ listId }: Props) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[10px] text-muted tracking-widest uppercase mb-1">task list</div>
-              <div className="text-sm tracking-wider text-fg">
-                <span className="text-subtle">▪</span> {taskList.name}
-                <span className="text-subtle ml-2">({pending.length})</span>
-              </div>
+              {renamingList ? (
+                <input
+                  value={listName}
+                  onChange={event => setListName(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') saveListName()
+                    if (event.key === 'Escape') {
+                      setListName(taskList.name)
+                      setRenamingList(false)
+                    }
+                  }}
+                  onBlur={saveListName}
+                  autoFocus
+                  className="w-64 max-w-full border-b border-border bg-transparent text-sm text-fg"
+                  aria-label="Task list name"
+                />
+              ) : (
+                <div className="text-sm tracking-wider text-fg">
+                  <span className="inline-flex items-center gap-2">
+                    <ItemMarker kind="task" />
+                    <span>{taskList.name}</span>
+                  </span>
+                  <span className="text-subtle ml-2">({pending.length})</span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={() => setRenamingList(true)}
+                className="h-8 w-8 rounded border border-border text-xs text-muted hover:bg-surface hover:text-fg"
+                title="Rename task list"
+                aria-label="Rename task list"
+              >
+                ✎
+              </button>
+              <button
+                onClick={() => setConfirmingListDelete(true)}
+                className="h-8 rounded border border-border px-2.5 text-[10px] uppercase tracking-wider text-muted hover:bg-surface hover:text-fg"
+                title="Delete task list"
+                aria-label="Delete task list"
+              >
+                delete
+              </button>
               <button
                 onClick={() => setExecutionMode(false)}
                 className={`px-3 py-1.5 rounded border text-[10px] tracking-wider uppercase transition-colors ${
@@ -115,7 +186,12 @@ export default function TaskOverlay({ listId }: Props) {
               >
                 execution
               </button>
-              <button onClick={closeTaskOverlay} className="text-muted hover:text-fg transition-colors text-sm ml-2">
+              <button
+                onClick={closeTaskOverlay}
+                className="h-8 w-8 rounded text-muted hover:bg-surface hover:text-fg transition-colors text-sm ml-1"
+                title="Close task list"
+                aria-label="Close task list"
+              >
                 ✕
               </button>
             </div>
@@ -140,6 +216,26 @@ export default function TaskOverlay({ listId }: Props) {
             </button>
           </div>
         </div>
+
+        {confirmingListDelete && (
+          <div className="flex items-center justify-between gap-4 border-b border-border bg-surface px-6 py-3">
+            <span className="text-xs text-dim">Delete {taskList.name} and its {tasks.length} tasks?</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmingListDelete(false)}
+                className="rounded border border-border px-3 py-1.5 text-xs text-dim hover:bg-raised hover:text-fg"
+              >
+                cancel
+              </button>
+              <button
+                onClick={removeTaskList}
+                className="rounded border border-fg bg-fg px-3 py-1.5 text-xs text-bg hover:opacity-80"
+              >
+                delete
+              </button>
+            </div>
+          </div>
+        )}
 
         {executionMode ? (
           <ExecutionBoard
@@ -285,7 +381,7 @@ const executionColumns: { status: TaskStatus; title: string }[] = [
 function ExecutionBoard({ tasks, draggedTaskId, onDragStart, onMoveTask, onOpenTask }: ExecutionBoardProps) {
   return (
     <div className="flex-1 overflow-auto p-6">
-      <div className="grid min-h-[360px] grid-cols-3 gap-4">
+      <div className="grid min-h-[300px] grid-cols-3 gap-4">
         {executionColumns.map(column => {
           const columnTasks = tasks.filter(task => getTaskStatus(task) === column.status)
 
@@ -298,7 +394,7 @@ function ExecutionBoard({ tasks, draggedTaskId, onDragStart, onMoveTask, onOpenT
                 const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId
                 if (taskId) onMoveTask(taskId, column.status)
               }}
-              className={`flex min-h-[360px] flex-col rounded border border-border bg-surface/35 transition-colors ${
+              className={`flex min-h-[300px] flex-col rounded border border-border bg-surface/35 transition-colors ${
                 draggedTaskId ? 'border-subtle bg-surface/70' : ''
               }`}
             >

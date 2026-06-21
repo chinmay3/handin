@@ -6,6 +6,7 @@ interface TasksState {
   taskLists: TaskList[]
   tasks: Task[]
   addTaskList: (name: string, originNoteId?: string | null) => TaskList
+  updateTaskListName: (id: string, name: string) => void
   deleteTaskList: (id: string) => void
   addTask: (listId: string, name: string, originNoteId?: string | null, originLine?: number | null, dueDate?: number | null) => Task
   completeTask: (id: string) => void
@@ -38,6 +39,12 @@ export const useTasksStore = create<TasksState>()(
         }
         set(s => ({ taskLists: [...s.taskLists, list] }))
         return list
+      },
+
+      updateTaskListName: (id, name) => {
+        set(s => ({
+          taskLists: s.taskLists.map(list => list.id === id ? { ...list, name } : list)
+        }))
       },
 
       deleteTaskList: (id) => {

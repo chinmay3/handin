@@ -10,7 +10,6 @@ commands (press ⌘ + K)
   add-task [task]              add to this document's connected list
   scratch                      temporary note (24h)
   save                         convert scratch to permanent
-  history                      toggle edit timestamps
   up                           remember position and go to document top
   down                         return to remembered position
   home                         go to home
@@ -21,8 +20,6 @@ commands (press ⌘ + K)
 navigation
 
   sidebar                      notes + task lists
-  ◎ graph map                  visual note connections
-  ◷ history                    when sections were written
 
 keyboard
 
@@ -55,7 +52,12 @@ export default function HelpNote() {
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="text-[10px] text-muted tracking-widest uppercase">help</div>
-          <button onClick={toggleHelp} className="text-muted hover:text-fg transition-colors text-sm">
+          <button
+            onClick={toggleHelp}
+            className="h-8 w-8 rounded text-muted hover:bg-raised hover:text-fg transition-colors text-sm"
+            title="Close help"
+            aria-label="Close help"
+          >
             ✕
           </button>
         </div>

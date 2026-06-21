@@ -34,7 +34,6 @@ export default function CommandPalette() {
   const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen)
   const openNote = useUIStore(s => s.openNote)
   const goHome = useUIStore(s => s.goHome)
-  const toggleHistory = useUIStore(s => s.toggleHistory)
   const toggleAccount = useUIStore(s => s.toggleAccount)
   const toggleSidebar = useUIStore(s => s.toggleSidebar)
   const toggleRightPanel = useUIStore(s => s.toggleRightPanel)
@@ -89,10 +88,8 @@ export default function CommandPalette() {
         const cursorPosition = getDocumentCursorPosition(activeNoteId, parentNote.content.length)
         const nextContent = insertSubnoteToken(parentNote.content, cursorPosition, note.title)
         updateNote(parentNote.id, { content: nextContent })
-        if (window.api) {
-          const fileName = `${parentNote.title.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase() || 'untitled'}.md`
-          window.api.writeNote(fileName, `# ${parentNote.title}\n\n${nextContent}`)
-        }
+        const savedParent = useNotesStore.getState().getNote(parentNote.id)
+        if (savedParent) window.api?.writeNote(savedParent)
         close()
         openNote(note.id)
         return
@@ -133,15 +130,8 @@ export default function CommandPalette() {
           return
         }
         updateNote(note.id, { isScratch: false, scratchExpiresAt: null })
-        close()
-        return
-      }
-      case 'history': {
-        if (!activeNoteId) {
-          fail('Open a note before toggling history')
-          return
-        }
-        toggleHistory()
+        const savedNote = useNotesStore.getState().getNote(note.id)
+        if (savedNote) window.api?.writeNote(savedNote)
         close()
         return
       }

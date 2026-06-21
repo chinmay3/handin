@@ -23,16 +23,19 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const events = useEventsStore(s => s.events)
   const addEvent = useEventsStore(s => s.addEvent)
+  const updateEvent = useEventsStore(s => s.updateEvent)
   const deleteEvent = useEventsStore(s => s.deleteEvent)
 
   const [newEventName, setNewEventName] = useState('')
   const [newEventDescription, setNewEventDescription] = useState('')
+  const [newEventDate, setNewEventDate] = useState('')
   const [newEventTime, setNewEventTime] = useState('')
   const [newEventReminder, setNewEventReminder] = useState('')
   const [newEventLink, setNewEventLink] = useState('')
   const [newEventLinks, setNewEventLinks] = useState<TaskLink[]>([])
   const [eventError, setEventError] = useState('')
   const [addingEvent, setAddingEvent] = useState(false)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(current)
@@ -52,11 +55,13 @@ export default function Calendar() {
   const resetEventDraft = () => {
     setNewEventName('')
     setNewEventDescription('')
+    setNewEventDate('')
     setNewEventTime('')
     setNewEventReminder('')
     setNewEventLink('')
     setNewEventLinks([])
     setEventError('')
+    setEditingEventId(null)
   }
 
   const buildLink = (value: string): TaskLink => {
@@ -80,32 +85,62 @@ export default function Calendar() {
       setEventError('event name required')
       return
     }
-    const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime()
+    const dateParts = newEventDate.split('-').map(Number)
+    const eventDate = dateParts.length === 3 && dateParts.every(Number.isFinite)
+      ? new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
+      : selectedDate
+    const date = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime()
     const links = newEventLink.trim()
       ? [...newEventLinks, buildLink(newEventLink)]
       : newEventLinks
-    addEvent({
+    const event = {
       name,
       description: newEventDescription.trim(),
       date,
       time: newEventTime,
       reminder: newEventReminder,
       links
-    })
+    }
+    if (editingEventId) updateEvent(editingEventId, event)
+    else addEvent(event)
     resetEventDraft()
     setAddingEvent(false)
+    setSelectedDate(eventDate)
+  }
+
+  const editEvent = (event: (typeof events)[number]) => {
+    setNewEventName(event.name)
+    setNewEventDescription(event.description)
+    setNewEventDate(format(new Date(event.date), 'yyyy-MM-dd'))
+    setNewEventTime(event.time)
+    setNewEventReminder(event.reminder)
+    setNewEventLink('')
+    setNewEventLinks(event.links || [])
+    setEventError('')
+    setEditingEventId(event.id)
+    setAddingEvent(true)
   }
 
   return (
     <motion.div {...slideUp} className="space-y-4">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setCurrent(subMonths(current, 1))} className="text-muted hover:text-fg transition-colors px-2">
+        <button
+          onClick={() => setCurrent(subMonths(current, 1))}
+          className="flex h-8 w-8 items-center justify-center rounded text-muted hover:bg-surface hover:text-fg transition-colors"
+          title="Previous month"
+          aria-label="Previous month"
+        >
           <ArrowIcon direction="left" className="w-3.5 h-3.5" />
         </button>
         <span className="text-xs text-dim tracking-widest uppercase">
           {format(current, 'MMMM yyyy')}
         </span>
-        <button onClick={() => setCurrent(addMonths(current, 1))} className="text-muted hover:text-fg transition-colors px-2">
+        <button
+          onClick={() => setCurrent(addMonths(current, 1))}
+          className="flex h-8 w-8 items-center justify-center rounded text-muted hover:bg-surface hover:text-fg transition-colors"
+          title="Next month"
+          aria-label="Next month"
+        >
           <ArrowIcon direction="right" className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -121,6 +156,7 @@ export default function Calendar() {
           return (
             <button
               key={day.toISOString()}
+              aria-label={format(day, 'MMMM d, yyyy')}
               onClick={() => {
                 setSelectedDate(selected ? null : day)
                 setAddingEvent(false)
@@ -151,11 +187,18 @@ export default function Calendar() {
             </div>
             <button
               onClick={() => {
-                setAddingEvent(open => !open)
-                setEventError('')
+                if (addingEvent) {
+                  setAddingEvent(false)
+                  resetEventDraft()
+                } else {
+                  resetEventDraft()
+                  setNewEventDate(format(selectedDate, 'yyyy-MM-dd'))
+                  setAddingEvent(true)
+                }
               }}
-              className="w-6 h-6 border border-border rounded text-dim hover:text-fg hover:bg-surface transition-colors"
+              className="w-8 h-8 border border-border rounded text-dim hover:text-fg hover:bg-surface transition-colors"
               title="Add event"
+              aria-label="Add event"
             >
               +
             </button>
@@ -163,7 +206,10 @@ export default function Calendar() {
 
           <div className="space-y-2">
             {selectedEvents.map(event => (
-              <div key={event.id} className="group border border-border rounded p-2 bg-bg">
+              <div
+                key={event.id}
+                className={`group rounded border p-2 ${editingEventId === event.id ? 'border-fg bg-surface' : 'border-border bg-bg'}`}
+              >
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs text-fg truncate">{event.name}</div>
@@ -176,8 +222,24 @@ export default function Calendar() {
                     )}
                   </div>
                   <button
-                    onClick={() => deleteEvent(event.id)}
-                    className="text-[10px] text-subtle hover:text-dim opacity-0 group-hover:opacity-100 transition-all"
+                    onClick={() => editEvent(event)}
+                    className="h-7 w-7 rounded text-xs text-subtle opacity-0 transition-all hover:bg-surface hover:text-dim group-hover:opacity-100 focus:opacity-100"
+                    title="Edit event"
+                    aria-label={`Edit ${event.name}`}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteEvent(event.id)
+                      if (editingEventId === event.id) {
+                        setAddingEvent(false)
+                        resetEventDraft()
+                      }
+                    }}
+                    className="h-7 w-7 rounded text-[10px] text-subtle opacity-0 transition-all hover:bg-surface hover:text-dim group-hover:opacity-100 focus:opacity-100"
+                    title="Delete event"
+                    aria-label={`Delete ${event.name}`}
                   >
                     ✕
                   </button>
@@ -234,22 +296,31 @@ export default function Calendar() {
 
               <div className="grid grid-cols-2 gap-2">
                 <input
-                  type="text"
+                  type="date"
+                  value={newEventDate}
+                  onChange={e => setNewEventDate(e.target.value)}
+                  className="w-full bg-bg text-xs text-dim border border-border rounded px-2 py-1.5"
+                  aria-label="Event date"
+                />
+                <input
+                  type="time"
                   value={newEventTime}
                   onChange={e => setNewEventTime(e.target.value)}
-                  placeholder="time..."
-                  className="w-full bg-transparent text-xs text-dim placeholder:text-subtle border-b border-border pb-1"
-                />
-                <select
-                  value={newEventReminder}
-                  onChange={e => setNewEventReminder(e.target.value)}
                   className="w-full bg-bg text-xs text-dim border border-border rounded px-2 py-1.5"
-                >
-                  {reminderOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+                  aria-label="Event time"
+                />
               </div>
+
+              <select
+                value={newEventReminder}
+                onChange={e => setNewEventReminder(e.target.value)}
+                className="w-full bg-bg text-xs text-dim border border-border rounded px-2 py-1.5"
+                aria-label="Event reminder"
+              >
+                {reminderOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
 
               <div className="space-y-1">
                 {newEventLinks.map(link => (
@@ -257,7 +328,9 @@ export default function Calendar() {
                     <span className="flex-1 truncate">{link.title}</span>
                     <button
                       onClick={() => setNewEventLinks(links => links.filter(item => item.id !== link.id))}
-                      className="hover:text-dim"
+                      className="h-7 w-7 rounded hover:bg-surface hover:text-dim"
+                      title="Remove link"
+                      aria-label={`Remove ${link.title}`}
                     >
                       ✕
                     </button>
@@ -275,7 +348,9 @@ export default function Calendar() {
                   />
                   <button
                     onClick={addLink}
-                    className="w-7 h-7 border border-border rounded text-dim hover:text-fg hover:bg-surface transition-colors"
+                    className="w-8 h-8 border border-border rounded text-dim hover:text-fg hover:bg-surface transition-colors"
+                    title="Add link"
+                    aria-label="Add event link"
                   >
                     +
                   </button>
@@ -286,7 +361,7 @@ export default function Calendar() {
                 onClick={handleAddEvent}
                 className="w-full border border-border rounded py-1.5 text-xs text-dim hover:text-fg hover:bg-surface transition-colors"
               >
-                add event
+                {editingEventId ? 'save event' : 'add event'}
               </button>
             </div>
           )}

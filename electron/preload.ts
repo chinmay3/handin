@@ -1,9 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { Note } from '../src/lib/types'
 
 contextBridge.exposeInMainWorld('api', {
-  writeNote: (fileName: string, content: string) => ipcRenderer.invoke('write-note', fileName, content),
+  writeNote: (note: Note) => ipcRenderer.invoke('write-note', note),
   readNotes: () => ipcRenderer.invoke('read-notes'),
-  deleteNote: (fileName: string) => ipcRenderer.invoke('delete-note', fileName),
-  writeScratch: (fileName: string, content: string) => ipcRenderer.invoke('write-scratch', fileName, content),
-  deleteScratch: (fileName: string) => ipcRenderer.invoke('delete-scratch', fileName)
+  deleteNote: (id: string) => ipcRenderer.invoke('delete-note', id),
+  deleteLegacyNote: (fileName: string, isScratch: boolean) => ipcRenderer.invoke('delete-legacy-note', fileName, isScratch)
 })

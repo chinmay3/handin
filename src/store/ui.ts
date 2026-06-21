@@ -8,11 +8,10 @@ interface UIState {
   activeNoteId: string | null
   noteHistory: string[]
   taskOverlayListId: string | null
+  taskOverlayTaskId: string | null
   commandPaletteOpen: boolean
   helpOpen: boolean
-  historyVisible: boolean
   searchFocused: boolean
-  graphOpen: boolean
   accountOpen: boolean
   rightPanelOpen: boolean
   quotesEnabled: boolean
@@ -26,13 +25,11 @@ interface UIState {
   openNote: (id: string) => void
   goBack: () => void
   goHome: () => void
-  openTaskOverlay: (listId: string) => void
+  openTaskOverlay: (listId: string, taskId?: string | null) => void
   closeTaskOverlay: () => void
   setCommandPaletteOpen: (open: boolean) => void
   toggleHelp: () => void
-  toggleHistory: () => void
   setSearchFocused: (focused: boolean) => void
-  toggleGraph: () => void
   toggleAccount: () => void
   toggleQuotes: () => void
   toggleDarkMode: () => void
@@ -49,11 +46,10 @@ export const useUIStore = create<UIState>()(
       activeNoteId: null,
       noteHistory: [],
       taskOverlayListId: null,
+      taskOverlayTaskId: null,
       commandPaletteOpen: false,
       helpOpen: false,
-      historyVisible: false,
       searchFocused: false,
-      graphOpen: false,
       accountOpen: false,
       rightPanelOpen: true,
       quotesEnabled: true,
@@ -74,7 +70,6 @@ export const useUIStore = create<UIState>()(
           activeScreen: 'note',
           activeNoteId: id,
           noteHistory: newHistory,
-          graphOpen: false,
           accountOpen: false
         })
       },
@@ -96,24 +91,15 @@ export const useUIStore = create<UIState>()(
         activeScreen: 'home',
         activeNoteId: null,
         noteHistory: [],
-        graphOpen: false,
         accountOpen: false
       }),
 
-      openTaskOverlay: (listId) => set({ taskOverlayListId: listId }),
-      closeTaskOverlay: () => set({ taskOverlayListId: null }),
+      openTaskOverlay: (listId, taskId = null) => set({ taskOverlayListId: listId, taskOverlayTaskId: taskId }),
+      closeTaskOverlay: () => set({ taskOverlayListId: null, taskOverlayTaskId: null }),
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       toggleHelp: () => set(s => ({ helpOpen: !s.helpOpen })),
-      toggleHistory: () => set(s => ({ historyVisible: !s.historyVisible })),
       setSearchFocused: (focused) => set({ searchFocused: focused }),
-      toggleGraph: () => set(s => ({
-        graphOpen: !s.graphOpen,
-        accountOpen: false
-      })),
-      toggleAccount: () => set(s => ({
-        accountOpen: !s.accountOpen,
-        graphOpen: false
-      })),
+      toggleAccount: () => set(s => ({ accountOpen: !s.accountOpen })),
       toggleQuotes: () => set(s => ({ quotesEnabled: !s.quotesEnabled })),
       toggleDarkMode: () => set(s => ({ darkMode: !s.darkMode })),
       toggleSidebarLists: () => set(s => {
